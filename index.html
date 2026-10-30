@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Italy Itinerary</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="flag" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div>
+      <h1>My Italy Itinerary</h1>
+      <p class="sub">Add a place and its address. Stops are grouped by city and put in an easy walking order.</p>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <form id="add" class="card">
+        <h2>1. Add a stop</h2>
+        <label>Place name
+          <input id="name" type="text" placeholder="e.g. Colosseum" required />
+        </label>
+        <label>Address in Italy
+          <input id="address" type="text" placeholder="e.g. Piazza del Colosseo, Roma" required />
+        </label>
+        <label>Note (optional)
+          <input id="note" type="text" placeholder="e.g. Tickets at 10:00" />
+        </label>
+        <button type="submit" id="addBtn">Add to itinerary</button>
+        <p id="msg" class="msg" role="status"></p>
+      </form>
+
+      <div class="card">
+        <div class="row">
+          <h2>2. Your trip</h2>
+          <button id="clear" class="link" type="button">Clear all</button>
+        </div>
+        <p id="summary" class="muted"></p>
+        <div id="groups"></div>
+      </div>
+
+      <details id="keyBox" class="card">
+        <summary>Google Maps key</summary>
+        <p class="muted">The map needs a Google Maps API key (Maps JavaScript API + Geocoding API). It is saved only in this browser.</p>
+        <form id="keyForm" class="row">
+          <input id="keyInput" type="text" placeholder="Paste API key" />
+          <button type="submit">Save</button>
+        </form>
+      </details>
+    </section>
+
+    <section class="mapWrap">
+      <div id="map"></div>
+      <div id="mapNote" class="mapNote">Add a Google Maps key (below the list) to see your stops on the map.</div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
