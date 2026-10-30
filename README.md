@@ -6,7 +6,8 @@ A simple trip planner for Italy using Google Maps.
    (You can also type the address yourself.)
 2. The app finds it on the map, **groups stops by city**, and puts each city's stops in an
    easy order (each next stop is the closest one left).
-3. Click **Open in Google Maps** next to a city to get walking directions for that day.
+3. Each city is a **folder**: click its name to open or close it.
+4. Click **Open in Google Maps** inside a city to get walking directions for that day.
 
 Stops are saved in your browser.
 
