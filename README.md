@@ -9,7 +9,15 @@ A simple trip planner for Italy using Google Maps.
 3. Each city is a **folder**: click its name to open or close it.
 4. Click **Open in Google Maps** inside a city to get walking directions for that day.
 
-Stops are saved in your browser.
+## Trips
+
+- Your trip is saved in your browser as you go. Type a name and click **Save trip** to name it.
+- **+ New trip** starts an empty trip. Your saved trips are listed under **My trips**; click one to open it.
+- Everyone who opens the site gets their own trips. Nothing is shared unless you send a link.
+- **Share a copy of this trip** copies a link. Whoever opens it gets their own copy to change,
+  and their changes don't affect yours.
+- Trips stay on the device and browser where you made them. To move one to your phone, share the link
+  to yourself.
 
 ## Google Maps key
 

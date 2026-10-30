@@ -17,6 +17,20 @@
 
   <main class="layout">
     <section class="panel">
+      <div class="card" id="tripCard">
+        <div class="row">
+          <h2>My trips</h2>
+          <button id="newTrip" class="link" type="button">+ New trip</button>
+        </div>
+        <form id="tripForm" class="row">
+          <input id="tripName" type="text" placeholder="Trip name, e.g. Summer in Italy" aria-label="Trip name" maxlength="60" />
+          <button type="submit">Save trip</button>
+        </form>
+        <p id="tripMsg" class="msg" role="status"></p>
+        <ul id="tripList" class="tripList"></ul>
+        <button id="share" class="link share" type="button">Share a copy of this trip ↗</button>
+      </div>
+
       <form id="add" class="card">
         <h2>1. Add a stop</h2>
         <label>Place name
