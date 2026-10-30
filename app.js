@@ -227,6 +227,129 @@ function loadGoogleMaps() {
   document.head.appendChild(s);
 }
 
+// ---------- Suggestions while typing the place name ----------
+// Uses Google Places when it's turned on for the key, otherwise the free Photon (OpenStreetMap) search.
+let picked = null;            // the place chosen from the list, with its address and location
+let options = [], active = -1, typingTimer, searchNo = 0, sessionToken = null, googlePlacesOK = true;
+
+function cityFrom(part) {
+  return part("locality") || part("postal_town") || part("administrative_area_level_3") || part("administrative_area_level_2") || "Other";
+}
+
+async function suggestGoogle(text) {
+  const { AutocompleteSuggestion, AutocompleteSessionToken } = await google.maps.importLibrary("places");
+  sessionToken ||= new AutocompleteSessionToken();
+  const { suggestions } = await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+    input: text, includedRegionCodes: ["it"], language: "en", sessionToken,
+  });
+  return suggestions.filter((s) => s.placePrediction).slice(0, 5).map(({ placePrediction: p }) => ({
+    title: p.mainText?.text || p.text.text,
+    subtitle: p.secondaryText?.text || "",
+    resolve: async () => {
+      const place = p.toPlace();
+      await place.fetchFields({ fields: ["formattedAddress", "location", "addressComponents"] });
+      sessionToken = null;
+      const part = (t) => place.addressComponents?.find((c) => c.types.includes(t))?.longText;
+      return { formatted: place.formattedAddress, city: cityFrom(part), lat: place.location.lat(), lng: place.location.lng() };
+    },
+  }));
+}
+
+async function suggestPhoton(text) {
+  // Box around Italy, then keep only Italian results
+  const res = await fetch("https://photon.komoot.io/api/?limit=10&bbox=6.6,35.4,18.6,47.1&q=" + encodeURIComponent(text));
+  const data = await res.json();
+  return data.features.filter((f) => f.properties.countrycode === "IT").slice(0, 5).map((f) => {
+    const p = f.properties;
+    const street = [p.street, p.housenumber].filter(Boolean).join(" ");
+    const city = p.city || (["city", "town", "village"].includes(p.type) ? p.name : "") || p.county || p.state || "Other";
+    const title = p.name || street || city;
+    const formatted = [...new Set([title, street, [p.postcode, city].filter(Boolean).join(" ")].filter(Boolean))].join(", ");
+    return {
+      title,
+      subtitle: [street, city].filter(Boolean).join(", "),
+      resolve: async () => ({ formatted, city, lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] }),
+    };
+  });
+}
+
+async function findSuggestions(text) {
+  if (googlePlacesOK && window.google?.maps?.importLibrary) {
+    try { return await suggestGoogle(text); }
+    catch { googlePlacesOK = false; } // Places API not enabled for this key; use the free search instead
+  }
+  return suggestPhoton(text);
+}
+
+function showSuggestions(list) {
+  options = list;
+  active = -1;
+  const box = $("suggest");
+  box.innerHTML = list.map((s, i) =>
+    `<li role="option" data-i="${i}"><strong>${esc(s.title)}</strong>${s.subtitle ? `<span>${esc(s.subtitle)}</span>` : ""}</li>`).join("");
+  box.hidden = !list.length;
+  $("name").setAttribute("aria-expanded", String(!!list.length));
+}
+
+function hideSuggestions() {
+  searchNo++; // ignore any search still on its way
+  showSuggestions([]);
+}
+
+function highlight(i) {
+  active = (i + options.length) % options.length;
+  [...$("suggest").children].forEach((li, n) => li.classList.toggle("active", n === active));
+  $("suggest").children[active]?.scrollIntoView({ block: "nearest" });
+}
+
+async function choose(i) {
+  const s = options[i];
+  if (!s) return;
+  hideSuggestions();
+  $("name").value = s.title;
+  $("address").value = s.subtitle || s.title;
+  message("Getting the address…");
+  try {
+    picked = await s.resolve();
+    $("address").value = picked.formatted;
+    message("Address filled in. Add a note if you like, then click Add.", "ok");
+    if (map) { map.panTo({ lat: picked.lat, lng: picked.lng }); map.setZoom(Math.max(map.getZoom(), 14)); }
+    $("note").focus();
+  } catch {
+    picked = null;
+    message("Couldn't get that address. Please type it in.", "err");
+  }
+}
+
+$("name").addEventListener("input", () => {
+  clearTimeout(typingTimer);
+  const text = $("name").value.trim();
+  if (text.length < 3) return hideSuggestions();
+  typingTimer = setTimeout(async () => {
+    const mine = ++searchNo;
+    try {
+      const list = await findSuggestions(text);
+      if (mine === searchNo) showSuggestions(list);
+    } catch { /* no suggestions; the user can still type the address */ }
+  }, 300);
+});
+
+$("name").addEventListener("keydown", (e) => {
+  if ($("suggest").hidden) return;
+  if (e.key === "ArrowDown") { e.preventDefault(); highlight(active + 1); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); highlight(active - 1); }
+  else if (e.key === "Enter" && active >= 0) { e.preventDefault(); choose(active); }
+  else if (e.key === "Escape") hideSuggestions();
+});
+
+// mousedown (not click) so the list doesn't close before the tap registers
+$("suggest").addEventListener("mousedown", (e) => {
+  const li = e.target.closest("li");
+  if (li) { e.preventDefault(); choose(+li.dataset.i); }
+});
+$("name").addEventListener("blur", () => setTimeout(hideSuggestions, 150));
+$("address").addEventListener("input", () => { picked = null; });
+
 // ---------- Buttons and forms ----------
 function message(text, kind = "") {
   $("msg").textContent = text;
@@ -243,11 +366,12 @@ $("add").addEventListener("submit", async (e) => {
   $("addBtn").disabled = true;
   message("Finding address…");
   try {
-    const place = await geocode(address);
+    const place = picked && address === picked.formatted ? picked : await geocode(address);
     stops.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, note, address, added: Date.now(), ...place });
     save();
     render();
     $("add").reset();
+    picked = null;
     $("name").focus();
     message(`Added "${name}" in ${place.city}.`, "ok");
     const m = markerById[stops[stops.length - 1].id];

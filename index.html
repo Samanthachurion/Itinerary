@@ -20,8 +20,13 @@
       <form id="add" class="card">
         <h2>1. Add a stop</h2>
         <label>Place name
-          <input id="name" type="text" placeholder="e.g. Colosseum" required />
+          <div class="field">
+            <input id="name" type="text" placeholder="Start typing, e.g. Colosseo" autocomplete="off" required
+                   role="combobox" aria-autocomplete="list" aria-controls="suggest" aria-expanded="false" />
+            <ul id="suggest" class="suggest" role="listbox" hidden></ul>
+          </div>
         </label>
+        <p class="hint">Pick a suggestion and the address fills in for you.</p>
         <label>Address in Italy
           <input id="address" type="text" placeholder="e.g. Piazza del Colosseo, Roma" required />
         </label>
@@ -43,7 +48,7 @@
 
       <details id="keyBox" class="card">
         <summary>Google Maps key</summary>
-        <p class="muted">The map needs a Google Maps API key (Maps JavaScript API + Geocoding API). It is saved only in this browser.</p>
+        <p class="muted">The map needs a Google Maps API key (Maps JavaScript API, Geocoding API and Places API (New)). It is saved only in this browser.</p>
         <form id="keyForm" class="row">
           <input id="keyInput" type="text" placeholder="Paste API key" />
           <button type="submit">Save</button>

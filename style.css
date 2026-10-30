@@ -94,3 +94,17 @@ ol.stops { list-style: none; margin: 0; padding: 0; }
   .mapWrap { height: 55vh; order: -1; }
   .panel { overflow: visible; }
 }
+
+/* Place suggestions under the name box */
+.field { position: relative; }
+.hint { margin: -4px 0 10px; font-size: .82rem; color: var(--muted); }
+.suggest {
+  position: absolute; z-index: 10; left: 0; right: 0; top: calc(100% + 4px);
+  list-style: none; margin: 0; padding: 4px; background: var(--card);
+  border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.15);
+  max-height: 300px; overflow-y: auto; font-weight: 400;
+}
+.suggest li { padding: 9px 10px; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; }
+.suggest li:hover, .suggest li.active { background: var(--soft); }
+.suggest strong { font-weight: 600; }
+.suggest span { font-size: .85rem; color: var(--muted); }
