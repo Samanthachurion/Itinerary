@@ -4,9 +4,11 @@
 
 const STORE = "italy-itinerary-stops";
 const KEY_STORE = "italy-itinerary-gmaps-key";
+const CLOSED_STORE = "italy-itinerary-closed-cities";
 const COLORS = ["#009246", "#ce2b37", "#1f6feb", "#b8860b", "#8a3ffc", "#0f8b8d", "#d9480f", "#c2255c"];
 
 let stops = load();
+let closedCities = loadClosed(); // city folders the user has closed
 let map, info, overlays = [], markerById = {};
 
 const $ = (id) => document.getElementById(id);
@@ -17,6 +19,12 @@ function load() {
 }
 function save() {
   try { localStorage.setItem(STORE, JSON.stringify(stops)); } catch {}
+}
+function loadClosed() {
+  try { return new Set(JSON.parse(localStorage.getItem(CLOSED_STORE)) || []); } catch { return new Set(); }
+}
+function saveClosed() {
+  try { localStorage.setItem(CLOSED_STORE, JSON.stringify([...closedCities])); } catch {}
 }
 function getKey() {
   let saved = "";
@@ -131,11 +139,14 @@ function render() {
   } else {
     let n = 0;
     box.innerHTML = groups.map((g) => `
-      <div class="group">
-        <div class="groupHead">
-          <div class="cityName"><span class="dot" style="background:${g.color}"></span>${esc(g.city)}</div>
-          <a class="go" href="${directionsLink(g.stops)}" target="_blank" rel="noopener">Open in Google Maps ↗</a>
-        </div>
+      <details class="folder" data-city="${esc(g.city)}" style="--city:${g.color}" ${closedCities.has(g.city) ? "" : "open"}>
+        <summary class="folderHead">
+          <span class="folderIcon" aria-hidden="true"></span>
+          <span class="cityName">${esc(g.city)}</span>
+          <span class="count">${g.stops.length} stop${g.stops.length > 1 ? "s" : ""}</span>
+        </summary>
+        <div class="folderBody">
+        <a class="go" href="${directionsLink(g.stops)}" target="_blank" rel="noopener">Open ${esc(g.city)} in Google Maps ↗</a>
         <ol class="stops">
           ${g.stops.map((s, i) => {
             n++;
@@ -152,7 +163,8 @@ function render() {
             </li>`;
           }).join("")}
         </ol>
-      </div>`).join("");
+        </div>
+      </details>`).join("");
   }
 
   drawMap(groups);
@@ -244,6 +256,7 @@ $("add").addEventListener("submit", async (e) => {
   message("Finding address…");
   try {
     const place = await geocode(address);
+    if (closedCities.delete(place.city)) saveClosed();
     stops.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, note, address, added: Date.now(), ...place });
     save();
     render();
@@ -274,6 +287,14 @@ $("groups").addEventListener("click", (e) => {
     if (s && m) { map.panTo(m.getPosition()); map.setZoom(Math.max(map.getZoom(), 15)); openInfo(s, m); }
   }
 });
+
+// Remember which city folders are open or closed
+$("groups").addEventListener("toggle", (e) => {
+  const f = e.target.closest(".folder");
+  if (!f) return;
+  if (f.open) closedCities.delete(f.dataset.city); else closedCities.add(f.dataset.city);
+  saveClosed();
+}, true);
 
 $("clear").addEventListener("click", () => {
   if (!stops.length || !confirm("Remove all stops from your itinerary?")) return;
