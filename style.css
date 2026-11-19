@@ -97,6 +97,14 @@ ol.stops { list-style: none; margin: 0; padding: 0; }
 
 /* Place suggestions under the name box */
 .field { position: relative; }
+textarea {
+  width: 100%; margin: 4px 0 10px; padding: 10px 12px; font: inherit; font-size: .95rem; resize: vertical;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text);
+}
+textarea:focus { outline: 2px solid var(--green); border-color: transparent; }
+#importBtn { width: 100%; }
+.steps { margin: 10px 0 8px; padding-left: 20px; font-size: .9rem; color: var(--muted); }
+.missing { margin: 6px 0 0; padding-left: 20px; font-size: .88rem; }
 .hint { margin: -4px 0 10px; font-size: .82rem; color: var(--muted); }
 .suggest {
   position: absolute; z-index: 10; left: 0; right: 0; top: calc(100% + 4px);

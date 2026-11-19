@@ -399,6 +399,104 @@ $("groups").addEventListener("click", (e) => {
   }
 });
 
+// ---------- Importing a Google Maps list ----------
+// Reads the text you get by copying a saved list in Google Maps. Each place looks like:
+//   Trevi Fountain          <- name
+//   4.7(532,245)            <- rating (not always there)
+//   Fountain                <- type of place
+//   Note                    <- Google's empty note box, or your own note
+// Places without a rating (towns, addresses) list their address instead.
+const RATING = /^\d(?:[.,]\d)?\s*\(\d[\d.,]*\)$/;
+const PRICE = /^[€$£]|^·/;
+
+function parseGoogleList(text) {
+  const groups = text.replace(/\r/g, "").split(/\n[ \t]*\n/)
+    .map((g) => g.split("\n").map((l) => l.trim()).filter(Boolean))
+    .filter((g) => g.length && !(g.length === 1 && /^(note|add a place|saved|share)$/i.test(g[0])));
+  const seen = new Set(), places = [];
+  for (const [name, ...rest] of groups) {
+    const r = rest.findIndex((l) => RATING.test(l));
+    let address = "", note = "";
+    if (r >= 0) {
+      // After the rating comes the type of place (or a price), then your note if you wrote one
+      const after = rest.slice(r + 1);
+      if (after.length && !PRICE.test(after[0])) after.shift();
+      note = after.filter((l) => !PRICE.test(l) && !/^note$/i.test(l)).join(" ");
+    } else {
+      address = rest.filter((l) => !/^note$/i.test(l)).join(", ");
+    }
+    const key = (name + "|" + address).toLowerCase();
+    if (!seen.has(key)) { seen.add(key); places.push({ name, address, note }); }
+  }
+  return places;
+}
+
+async function searchGooglePlace(query) {
+  const { Place } = await google.maps.importLibrary("places");
+  const { places } = await Place.searchByText({
+    textQuery: query, region: "it", maxResultCount: 1,
+    fields: ["displayName", "formattedAddress", "location", "addressComponents"],
+  });
+  const p = places && places[0];
+  if (!p || !p.addressComponents?.some((c) => c.types.includes("country") && c.shortText === "IT")) return null;
+  const part = (t) => p.addressComponents.find((c) => c.types.includes(t))?.longText;
+  return { formatted: p.formattedAddress, city: cityFrom(part), lat: p.location.lat(), lng: p.location.lng() };
+}
+
+// Find one place from the list: Google Places if the key allows it, otherwise the free search
+async function findListPlace({ name, address }) {
+  const query = [name, address].filter(Boolean).join(", ");
+  const inItaly = /\b(italy|italia)\b/i.test(query) ? query : query + ", Italy";
+  if (googlePlacesOK && window.google?.maps?.importLibrary) {
+    try { const p = await searchGooglePlace(inItaly); if (p) return p; }
+    catch { googlePlacesOK = false; } // Places API not on for this key
+  }
+  for (const q of [query, name]) {
+    try { const [s] = await suggestPhoton(q); if (s) return await s.resolve(); } catch {}
+  }
+  return geocode(inItaly); // last try; throws if nothing is found
+}
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+$("importBtn").addEventListener("click", async () => {
+  const list = parseGoogleList($("importText").value);
+  const say = (t, kind = "") => { $("importMsg").textContent = t; $("importMsg").className = "msg " + kind; };
+  $("importMissing").hidden = true;
+  if (!list.length) return say("Paste your list first.", "err");
+
+  const have = new Set(stops.map((s) => s.name.trim().toLowerCase()));
+  const todo = list.filter((p) => !have.has(p.name.toLowerCase()));
+  const already = list.length - todo.length;
+  const missing = [];
+  let added = 0;
+
+  $("importBtn").disabled = true;
+  for (const [i, p] of todo.entries()) {
+    say(`Finding places… ${i + 1} of ${todo.length}`);
+    try {
+      const place = await findListPlace(p);
+      stops.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: p.name, note: p.note,
+        address: [p.name, p.address].filter(Boolean).join(", "), added: Date.now(), ...place });
+      added++;
+      save();
+      render();
+    } catch {
+      missing.push(p.name);
+    }
+    await wait(350); // be gentle with the free search services
+  }
+  $("importBtn").disabled = false;
+
+  const parts = [`Added ${added} place${added === 1 ? "" : "s"}.`];
+  if (already) parts.push(`${already} ${already === 1 ? "was" : "were"} already in your trip.`);
+  if (missing.length) parts.push(`Couldn't find ${missing.length}; add ${missing.length === 1 ? "it" : "them"} with the form above:`);
+  say(parts.join(" "), missing.length ? "err" : "ok");
+  $("importMissing").innerHTML = missing.map((n) => `<li>${esc(n)}</li>`).join("");
+  $("importMissing").hidden = !missing.length;
+  if (added) $("importText").value = "";
+});
+
 $("clear").addEventListener("click", () => {
   if (!stops.length || !confirm("Remove all stops from your itinerary?")) return;
   stops = [];

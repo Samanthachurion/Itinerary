@@ -37,6 +37,18 @@
         <p id="msg" class="msg" role="status"></p>
       </form>
 
+      <details id="importBox" class="card">
+        <summary>Import a Google Maps list</summary>
+        <ol class="steps">
+          <li>Open your list in Google Maps and scroll to the bottom so every place loads.</li>
+          <li>Select the whole list, copy it, and paste it below.</li>
+        </ol>
+        <textarea id="importText" rows="6" placeholder="Paste your Google Maps list here"></textarea>
+        <button type="button" id="importBtn">Import places</button>
+        <p id="importMsg" class="msg" role="status"></p>
+        <ul id="importMissing" class="missing" hidden></ul>
+      </details>
+
       <div class="card">
         <div class="row">
           <h2>2. Your trip</h2>

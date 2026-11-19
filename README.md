@@ -10,6 +10,16 @@ A simple trip planner for Italy using Google Maps.
 
 Stops are saved in your browser.
 
+## Import a Google Maps list
+
+1. Open your saved list in Google Maps and scroll to the bottom so every place loads.
+2. Select the whole list, copy it, and paste it into **Import a Google Maps list** in the app.
+3. Click **Import places**. Each place is found and added as a stop, with any notes you wrote in Google Maps.
+
+Places already in your trip are skipped, so you can import again after your list changes.
+Places the app can't find are listed so you can add them by hand. With a Google Maps key that
+has the **Places API (New)** turned on, places are found with Google; otherwise a free search is used.
+
 ## Google Maps key
 
 In the [Google Cloud Console](https://console.cloud.google.com/google/maps-apis), create an API key
